@@ -90,7 +90,7 @@ clickhouse_shard/
 ### 1. Клонировать репозиторий
 
 ```bash
-git clone https://github.com/your-username/clickhouse-sharded-cluster.git
+git clone https://github.com/asseke-ekb/clickhouse-sharded-cluster.git
 cd clickhouse-sharded-cluster
 ```
 
