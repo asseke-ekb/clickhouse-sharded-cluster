@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  clickhouse-shard-03:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: clickhouse-shard-03
+    hostname: clickhouse-shard-03
+    ports:
+      - "8125:8123"   # HTTP interface (different port)
+      - "9002:9000"   # Native TCP protocol (different port)
+      - "9011:9009"   # Interserver HTTP port (different port)
+      - "9365:9363"   # Prometheus metrics (different port)
+    volumes:
+      - ./data/clickhouse:/var/lib/clickhouse
+      - ./logs/clickhouse:/var/log/clickhouse-server
+      - ./config/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml:ro
+      - ./config/clickhouse/users.xml:/etc/clickhouse-server/users.xml:ro
+    environment:
+      CLICKHOUSE_DB: default
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    restart: unless-stopped
+    networks:
+      - clickhouse-network
+
+networks:
+  clickhouse-network:
+    driver: bridge

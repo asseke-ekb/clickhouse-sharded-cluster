@@ -1,0 +1,188 @@
+version: '3.8'
+
+networks:
+  clickhouse-network:
+    driver: bridge
+
+services:
+  # ==================== ZooKeeper Ensemble ====================
+  zookeeper-1:
+    image: zookeeper:3.8
+    container_name: zookeeper-1
+    hostname: zookeeper-1
+    ports:
+      - "2181:2181"
+      - "7070:7070"
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=0.0.0.0:2888:3888;2181 server.2=zookeeper-2:2888:3888;2181 server.3=zookeeper-3:2888:3888;2181
+      ZOO_TICK_TIME: 2000
+      ZOO_INIT_LIMIT: 10
+      ZOO_SYNC_LIMIT: 5
+      ZOO_MAX_CLIENT_CNXNS: 0
+      ZOO_AUTOPURGE_PURGEINTERVAL: 24
+      ZOO_AUTOPURGE_SNAPRETAINCOUNT: 7
+      ZOO_4LW_COMMANDS_WHITELIST: srvr,mntr,ruok,stat
+    volumes:
+      - ./data/zookeeper-1:/data
+      - ./logs/zookeeper-1:/datalog
+    restart: unless-stopped
+    networks:
+      - clickhouse-network
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  zookeeper-2:
+    image: zookeeper:3.8
+    container_name: zookeeper-2
+    hostname: zookeeper-2
+    ports:
+      - "2182:2181"
+      - "7071:7070"
+    environment:
+      ZOO_MY_ID: 2
+      ZOO_SERVERS: server.1=zookeeper-1:2888:3888;2181 server.2=0.0.0.0:2888:3888;2181 server.3=zookeeper-3:2888:3888;2181
+      ZOO_TICK_TIME: 2000
+      ZOO_INIT_LIMIT: 10
+      ZOO_SYNC_LIMIT: 5
+      ZOO_MAX_CLIENT_CNXNS: 0
+      ZOO_AUTOPURGE_PURGEINTERVAL: 24
+      ZOO_AUTOPURGE_SNAPRETAINCOUNT: 7
+      ZOO_4LW_COMMANDS_WHITELIST: srvr,mntr,ruok,stat
+    volumes:
+      - ./data/zookeeper-2:/data
+      - ./logs/zookeeper-2:/datalog
+    restart: unless-stopped
+    networks:
+      - clickhouse-network
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  zookeeper-3:
+    image: zookeeper:3.8
+    container_name: zookeeper-3
+    hostname: zookeeper-3
+    ports:
+      - "2183:2181"
+      - "7072:7070"
+    environment:
+      ZOO_MY_ID: 3
+      ZOO_SERVERS: server.1=zookeeper-1:2888:3888;2181 server.2=zookeeper-2:2888:3888;2181 server.3=0.0.0.0:2888:3888;2181
+      ZOO_TICK_TIME: 2000
+      ZOO_INIT_LIMIT: 10
+      ZOO_SYNC_LIMIT: 5
+      ZOO_MAX_CLIENT_CNXNS: 0
+      ZOO_AUTOPURGE_PURGEINTERVAL: 24
+      ZOO_AUTOPURGE_SNAPRETAINCOUNT: 7
+      ZOO_4LW_COMMANDS_WHITELIST: srvr,mntr,ruok,stat
+    volumes:
+      - ./data/zookeeper-3:/data
+      - ./logs/zookeeper-3:/datalog
+    restart: unless-stopped
+    networks:
+      - clickhouse-network
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ==================== ClickHouse Shards ====================
+  clickhouse-shard-01:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: clickhouse-shard-01
+    hostname: clickhouse-shard-01
+    ports:
+      - "8123:8123"   # HTTP interface
+      - "9000:9000"   # Native TCP protocol
+      - "9009:9009"   # Interserver HTTP port
+      - "9363:9363"   # Prometheus metrics
+    volumes:
+      - ./shard-1/data/clickhouse:/var/lib/clickhouse
+      - ./shard-1/logs/clickhouse:/var/log/clickhouse-server
+      - ./shard-1/config/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml:ro
+      - ./shard-1/config/clickhouse/users.xml:/etc/clickhouse-server/users.xml:ro
+    environment:
+      CLICKHOUSE_DB: default
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    restart: unless-stopped
+    depends_on:
+      zookeeper-1:
+        condition: service_healthy
+      zookeeper-2:
+        condition: service_healthy
+      zookeeper-3:
+        condition: service_healthy
+    networks:
+      - clickhouse-network
+
+  clickhouse-shard-02:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: clickhouse-shard-02
+    hostname: clickhouse-shard-02
+    ports:
+      - "8124:8123"   # HTTP interface
+      - "9001:9000"   # Native TCP protocol
+      - "9010:9009"   # Interserver HTTP port
+      - "9364:9363"   # Prometheus metrics
+    volumes:
+      - ./shard-2/data/clickhouse:/var/lib/clickhouse
+      - ./shard-2/logs/clickhouse:/var/log/clickhouse-server
+      - ./shard-2/config/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml:ro
+      - ./shard-2/config/clickhouse/users.xml:/etc/clickhouse-server/users.xml:ro
+    environment:
+      CLICKHOUSE_DB: default
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    restart: unless-stopped
+    depends_on:
+      zookeeper-1:
+        condition: service_healthy
+      zookeeper-2:
+        condition: service_healthy
+      zookeeper-3:
+        condition: service_healthy
+    networks:
+      - clickhouse-network
+
+  clickhouse-shard-03:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: clickhouse-shard-03
+    hostname: clickhouse-shard-03
+    ports:
+      - "8125:8123"   # HTTP interface
+      - "9002:9000"   # Native TCP protocol
+      - "9011:9009"   # Interserver HTTP port
+      - "9365:9363"   # Prometheus metrics
+    volumes:
+      - ./shard-3/data/clickhouse:/var/lib/clickhouse
+      - ./shard-3/logs/clickhouse:/var/log/clickhouse-server
+      - ./shard-3/config/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml:ro
+      - ./shard-3/config/clickhouse/users.xml:/etc/clickhouse-server/users.xml:ro
+    environment:
+      CLICKHOUSE_DB: default
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    restart: unless-stopped
+    depends_on:
+      zookeeper-1:
+        condition: service_healthy
+      zookeeper-2:
+        condition: service_healthy
+      zookeeper-3:
+        condition: service_healthy
+    networks:
+      - clickhouse-network

@@ -1,0 +1,41 @@
+# ClickHouse data directories
+shard-1/data/
+shard-2/data/
+shard-3/data/
+
+# ClickHouse logs
+shard-1/logs/
+shard-2/logs/
+shard-3/logs/
+
+# ZooKeeper data and logs
+zookeeper-1/data/
+zookeeper-1/logs/
+zookeeper-2/data/
+zookeeper-2/logs/
+zookeeper-3/data/
+zookeeper-3/logs/
+
+# Docker volumes
+**/data/
+**/logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Backup files
+*.backup
+*.bak
+
+# Environment files (if you add them later)
+.env
+.env.local
